@@ -7,3 +7,7 @@ edition = "2018"
 
 [dependencies]
 home = "0.5.3"
+pallet = "0.7.0"
+serde = "1.0.130"
+sled = "0.34.7"
+tantivy = "0.16.1"

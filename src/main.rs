@@ -1,8 +1,15 @@
+#[macro_use]
+extern crate serde;
+
 mod ui;
 mod store;
+mod models;
 
+use crate::models::TimeEntry;
 use store::tracks;
 use ui::prompt;
+use store::path_utils;
+
 fn print_tracks() {
     if let Ok(tracks) = tracks::get_tracks() {
         if tracks.len() != 0 {
@@ -25,10 +32,44 @@ fn select_track() -> String {
     selected_track.unwrap()
 }
 
-fn main() {
+fn select_time() -> u32 {
+    let mut time: Option<u32> = None;
+    while time == None {
+        let input = prompt("Add minutes: ");
+        if !input.is_empty() {
+            time = match input.parse::<u32>() {
+                Ok(number) => Some(number),
+                _ => None,
+            }
+        }
+    }
+    time.unwrap()
+}
+
+fn select_message() -> String {
+    let input = prompt("Add Message (optional): ");
+    input
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     print_tracks();
     // let mut running = true;
     
     let selected_track = select_track();
     println!("Selected: {}", selected_track);
+
+    let db_path = path_utils::get_config_dir().join("db");
+    let db = sled::open(db_path)?;
+    let store: pallet::Store<TimeEntry> = 
+    pallet::Store::builder().with_db(db).with_index_dir(path_utils::get_config_dir()).finish()?;
+
+    let time = select_time();
+    let msg = select_message();
+
+    let _ = store.create(&TimeEntry::new(selected_track, time, msg));
+
+    let entries = store.search("*")?;
+
+    println!("{:?}", entries);
+    Ok(())
 }
