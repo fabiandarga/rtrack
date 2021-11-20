@@ -6,9 +6,10 @@ mod store;
 mod models;
 
 use crate::models::TimeEntry;
-use store::tracks;
+use store::{ tracks, time_entries };
 use ui::prompt;
 use store::path_utils;
+
 
 fn print_tracks() {
     if let Ok(tracks) = tracks::get_tracks() {
@@ -52,23 +53,23 @@ fn select_message() -> String {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    print_tracks();
-    // let mut running = true;
-    
-    let selected_track = select_track();
-    println!("Selected: {}", selected_track);
-
     let db_path = path_utils::get_config_dir().join("db");
     let db = sled::open(db_path)?;
     let store: pallet::Store<TimeEntry> = 
     pallet::Store::builder().with_db(db).with_index_dir(path_utils::get_config_dir()).finish()?;
 
+    print_tracks();
+    // let mut running = true;
+    
+    let selected_track = select_track();
+    println!("Selected: {}", selected_track);
     let time = select_time();
     let msg = select_message();
 
-    let _ = store.create(&TimeEntry::new(selected_track, time, msg));
+    let entry = TimeEntry::new(selected_track, time, msg);
+    time_entries::add_time_entry(&store, &entry)?;
 
-    let entries = store.search("*")?;
+    let entries = time_entries::get_all_time_entries(&store);
 
     println!("{:?}", entries);
     Ok(())

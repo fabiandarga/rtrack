@@ -1,5 +1,5 @@
 
-#[derive(Serialize, Deserialize, Debug, pallet::DocumentLike)]
+#[derive(Serialize, Deserialize, Debug, pallet::DocumentLike, Clone)]
 #[pallet(tree_name = "time_entries")]
 pub struct TimeEntry {
     #[pallet(default_search_field)]
