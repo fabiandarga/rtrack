@@ -17,19 +17,23 @@ pub fn get_tracks() -> Result<Vec<String>, Error> {
     Ok(vec)
 }
 
-pub fn add_track(track_name: &str) -> Result<(), Error> {
+pub fn add_track(track_name: &str) -> Result<(), String> {
     if track_name.is_empty() {
-        return Ok(()); // actually throw error
+        return Err("add_track - track_name may not be empty".to_owned());
     }
     if let Ok(mut tracks) = get_tracks() {
         if tracks.iter().any(|s| s == track_name) {
-            return Ok(()); // actually throw error
+            return Err(format!("add_track - track with this name already exists: {}", track_name));
         }
         tracks.push(track_name.to_owned());
         
-        save_tracks(tracks)?;
+        return match save_tracks(tracks) {
+            Ok(_) => Ok(()),
+            Err(_) => Err("add_track - could not save track data".to_owned()),
+        }
+    } else {
+        return Err("add_track - could not read track data".to_owned());
     };
-    Ok(())
 }
 
 pub fn save_tracks(tracks:Vec<String>) -> Result<(), Error> {

@@ -1,5 +1,13 @@
 use crate::TimeEntry;
 
+pub fn print_tracks(tracks: &Vec<String>) {
+    if tracks.len() != 0 {
+        println!("Tracks: {:?}", tracks);
+    } else {
+        println!("No tracks, yet")
+    }
+}
+
 pub fn print_time_entry(entry: &TimeEntry) {
     println!("{} | {} | {}", entry.track, entry.minutes, entry.message);
 }

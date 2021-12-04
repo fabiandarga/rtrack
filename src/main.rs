@@ -10,48 +10,7 @@ use store::{ tracks, time_entries };
 use ui::prompt;
 use store::path_utils;
 use ui::display;
-
-
-fn print_tracks() {
-    if let Ok(tracks) = tracks::get_tracks() {
-        if tracks.len() != 0 {
-            println!("Tracks: {:?}", tracks);
-        }
-    };
-}
-
-fn select_track() -> String {
-    let mut selected_track: Option<String> = None;
-    while selected_track == None {
-        let input = prompt("Choose Track (or add new): ");
-        if !input.is_empty() {
-            if let Err(err) = tracks::add_track(&input) {
-                println!("Error: {:?}", err);
-            };
-            selected_track = Some(input);
-        }
-    }
-    selected_track.unwrap()
-}
-
-fn select_time() -> u32 {
-    let mut time: Option<u32> = None;
-    while time == None {
-        let input = prompt("Add minutes: ");
-        if !input.is_empty() {
-            time = match input.parse::<u32>() {
-                Ok(number) => Some(number),
-                _ => None,
-            }
-        }
-    }
-    time.unwrap()
-}
-
-fn select_message() -> String {
-    let input = prompt("Add Message (optional): ");
-    input
-}
+use ui::input;
 
 #[derive(Debug, PartialEq)]
 enum Mode {
@@ -93,13 +52,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match mode {
         Mode::Add => {
-            print_tracks();
+            let track_names = tracks::get_tracks()?;
+            display::print_tracks(&track_names);
 
-            let selected_track = select_track();
-            println!("Selected: {}", selected_track);
+            let (selected_track, is_new) = input::select_track(&track_names);
+            if is_new {
+                println!("Create new Track: {}? (Y/n)", selected_track);
+                let answer = prompt(" > ");
+                if answer != "n" {
+                    tracks::add_track(&selected_track)?;
+                }
+            } else {
+                println!("Selected Track: {}", selected_track);
+            }
         
-            let time = select_time();
-            let msg = select_message();
+            let time = input::select_time();
+            let msg = input::select_message();
         
             let entry = TimeEntry::new(selected_track, time, msg);
             time_entries::add_time_entry(&store, &entry)?;
