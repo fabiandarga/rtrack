@@ -3,11 +3,11 @@
 #[pallet(tree_name = "time_entries")]
 pub struct TimeEntry {
     #[pallet(default_search_field)]
-    track: String,
+    pub track: String,
     #[pallet(index_field_type = "u64")]
-    minutes: u32,
+    pub minutes: u32,
     #[pallet(default_search_field)]
-    message: String,
+    pub message: String,
 }
 
 impl TimeEntry {
