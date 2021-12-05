@@ -1,11 +1,14 @@
 use std::io::{ Error, Read, Write };
 use std::fs::File;
 
-use crate::path_utils;
+use crate::store::path_utils::get_tracks_file_path;
 
 pub fn get_tracks() -> Result<Vec<String>, Error> {
-    let path = path_utils::get_tracks_file_path();
-    let mut f = File::open(path)?;
+    let path = get_tracks_file_path();
+    let mut f = match File::open(&path) {
+        Ok(f) => f,
+        Err(_) => File::create(&path)?,
+    };
     let mut buffer = String::new();
     f.read_to_string(&mut buffer)?;
 
@@ -37,7 +40,7 @@ pub fn add_track(track_name: &str) -> Result<(), String> {
 }
 
 pub fn save_tracks(tracks:Vec<String>) -> Result<(), Error> {
-    let path = path_utils::get_tracks_file_path();
+    let path = get_tracks_file_path();
     let mut f = File::create(path).unwrap();
 
     write!(&mut f, "{}", tracks.join(";"))?;

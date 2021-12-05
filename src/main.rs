@@ -1,14 +1,18 @@
 #[macro_use]
 extern crate serde;
 
+extern crate chrono;
+
+use chrono::prelude::*;
+
 mod ui;
 mod store;
 mod models;
 
 use crate::models::TimeEntry;
 use store::{ tracks, time_entries };
+use store::path_utils::{ ensure_config_dir_exists, get_config_dir };
 use ui::prompt;
-use store::path_utils;
 use ui::display;
 use ui::input;
 
@@ -40,10 +44,12 @@ fn select_mode() -> Mode {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let db_path = path_utils::get_config_dir().join("db");
+    ensure_config_dir_exists()?;
+
+    let db_path = get_config_dir().join("db");
     let db = sled::open(db_path)?;
     let store: pallet::Store<TimeEntry> = 
-    pallet::Store::builder().with_db(db).with_index_dir(path_utils::get_config_dir()).finish()?;
+    pallet::Store::builder().with_db(db).with_index_dir(get_config_dir()).finish()?;
 
     let mut mode : Mode = Mode::None;
     while mode == Mode::None {
@@ -68,8 +74,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         
             let time = input::select_time();
             let msg = input::select_message();
+            let date : DateTime<Local> = Local::now();
+            let date_str= format!("{}-{}-{}", date.year(), date.month(), date.day());
         
-            let entry = TimeEntry::new(selected_track, time, msg);
+            let entry = TimeEntry::new(selected_track, time, msg, date_str);
             time_entries::add_time_entry(&store, &entry)?;
         }
         Mode::ShowLast => {

@@ -1,4 +1,5 @@
 use std::path::{ Path, PathBuf };
+use std::fs;
 
 use home;
 
@@ -13,4 +14,10 @@ pub fn get_tracks_file_path() -> PathBuf {
     let config_path = get_config_dir();
     let path = config_path.join("tracks.rtr");
     path
+}
+
+pub fn ensure_config_dir_exists() -> std::io::Result<()> {
+    let path = get_config_dir();
+    fs::create_dir_all(path)?;
+    Ok(())
 }
