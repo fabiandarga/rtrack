@@ -8,10 +8,11 @@ use chrono::prelude::*;
 mod ui;
 mod store;
 mod models;
+mod search;
 
 use crate::models::TimeEntry;
 use store::{ tracks, time_entries };
-use store::path_utils::{ ensure_config_dir_exists, get_config_dir };
+use store::path_utils::{ ensure_config_dir_exists, get_data_dir };
 use ui::prompt;
 use ui::display;
 use ui::input;
@@ -46,10 +47,11 @@ fn select_mode() -> Mode {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     ensure_config_dir_exists()?;
 
-    let db_path = get_config_dir().join("db");
+    let data_path = get_data_dir();
+    let db_path = data_path.join("db");
     let db = sled::open(db_path)?;
     let store: pallet::Store<TimeEntry> = 
-    pallet::Store::builder().with_db(db).with_index_dir(get_config_dir()).finish()?;
+    pallet::Store::builder().with_db(db).with_index_dir(data_path).finish()?;
 
     let mut mode : Mode = Mode::None;
     while mode == Mode::None {
@@ -77,7 +79,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let date : DateTime<Local> = Local::now();
             let date_str= format!("{}-{}-{}", date.year(), date.month(), date.day());
         
-            let entry = TimeEntry::new(selected_track, time, msg, date_str);
+            let entry = TimeEntry::new(selected_track, time, msg, date_str, date.timestamp());
             time_entries::add_time_entry(&store, &entry)?;
         }
         Mode::ShowLast => {
@@ -90,6 +92,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("---");
 
             display::print_time_entry_table(&last_n);
+        }
+        Mode::Search => {
+            let date_query = input::choose_date()?;
+            let entries = time_entries::find_by_dates(&store, date_query)?;
+            display::print_time_entry_table(&entries);
         }
         _ => {}
     }

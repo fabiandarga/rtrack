@@ -5,19 +5,22 @@ use crate::store::path_utils::get_tracks_file_path;
 
 pub fn get_tracks() -> Result<Vec<String>, Error> {
     let path = get_tracks_file_path();
-    let mut f = match File::open(&path) {
-        Ok(f) => f,
-        Err(_) => File::create(&path)?,
-    };
-    let mut buffer = String::new();
-    f.read_to_string(&mut buffer)?;
+    match File::open(&path) {
+        Ok(mut f) => {
+            let mut buffer = String::new();
+            f.read_to_string(&mut buffer)?;
 
-    let vec = buffer.split(";")
-        .filter(|s| !s.is_empty())
-        .map(|s| s.trim().to_owned())
-        .collect::<Vec<String>>();
+            let vec = buffer.split(";")
+                .filter(|s| !s.is_empty())
+                .map(|s| s.trim().to_owned())
+                .collect::<Vec<String>>();
 
-    Ok(vec)
+            Ok(vec)
+        },
+        Err(_) =>  {
+            Ok(vec![])
+        }
+    }
 }
 
 pub fn add_track(track_name: &str) -> Result<(), String> {

@@ -1,4 +1,5 @@
 use crate::ui::prompt;
+use crate::search::DateQuery;
 
 pub fn select_track(tracks: &Vec<String>) -> (String, bool) {
     let mut input: String = "".to_owned();
@@ -30,4 +31,24 @@ pub fn select_time() -> u32 {
 pub fn select_message() -> String {
     let input = prompt("Add Message (optional): ");
     input
+}
+
+pub fn choose_date() -> Result<DateQuery, String> {
+    let input = prompt("Filter by date (year, month or day): ");
+    let split = input.split(":");
+    let vec: Vec<&str> = split.collect();
+    match vec.len() {
+        2 => {
+            let from = vec[0].to_owned();
+            let to = vec[1].to_owned();
+            Ok(DateQuery::new(from, Some(to)))
+        }
+        1 => {
+            let from = vec[0].to_owned();
+            Ok(DateQuery::new(from, None))
+        }
+        _ => {
+            Err("Wrong Date Format".to_owned())
+        }
+    }
 }

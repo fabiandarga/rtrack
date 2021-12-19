@@ -10,15 +10,18 @@ pub struct TimeEntry {
     pub message: String,
     #[pallet(default_search_field)]
     pub date: String,
+    #[pallet(default_search_field)]
+    pub timestamp: i64,
 }
 
 impl TimeEntry {
-    pub fn new(track: String, minutes: u32, message: String, date: String) -> TimeEntry {
+    pub fn new(track: String, minutes: u32, message: String, date:String, timestamp: i64) -> TimeEntry {
         TimeEntry {
             track,
             minutes,
             message,
             date,
+            timestamp
         }
     }
 }
