@@ -94,6 +94,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             display::print_time_entry_table(&last_n);
         }
         Mode::Search => {
+            println!("---");
+            println!("Search by date\n");
+            println!("Enter year, year-month or year-month-day for exact matches.");
+            println!("Or enter a range. e.g. \"2020-04:2021-04\".\n");
             let date_query = input::choose_date()?;
             let entries = time_entries::find_by_dates(&store, date_query)?;
             display::print_time_entry_table(&entries);

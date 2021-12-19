@@ -16,7 +16,6 @@ pub fn get_all_time_entries(store: &TimeEntryStore) -> Result<Vec<TimeEntry>, Bo
 
 pub fn find_by_dates(store: &TimeEntryStore, dates: DateQuery) -> Result<Vec<TimeEntry>, Box<dyn std::error::Error>> {
     let q = dates.to_string();
-    println!("{}", q);
     let result = store.search(q.as_str())?;
     Ok(map_results_to_time_entries(result))
 }

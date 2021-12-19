@@ -36,7 +36,7 @@ pub fn select_message() -> String {
 pub fn choose_date() -> Result<DateQuery, String> {
     let input = prompt("Filter by date (year, month or day): ");
     let split = input.split(":");
-    let vec: Vec<&str> = split.collect();
+    let vec: Vec<&str> = split.map(|s| s.trim()).collect();
     match vec.len() {
         2 => {
             let from = vec[0].to_owned();
