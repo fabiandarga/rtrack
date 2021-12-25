@@ -3,12 +3,16 @@ extern crate serde;
 
 extern crate chrono;
 
+use crate::arguments::get_clap_app;
+use crate::arguments::get_arguments;
 use chrono::prelude::*;
 
 mod ui;
 mod store;
 mod models;
 mod search;
+mod arguments;
+mod types;
 
 use crate::models::TimeEntry;
 use store::{ tracks, time_entries };
@@ -16,14 +20,7 @@ use store::path_utils::{ ensure_config_dir_exists, get_data_dir };
 use ui::prompt;
 use ui::display;
 use ui::input;
-
-#[derive(Debug, PartialEq)]
-enum Mode {
-    Add,
-    ShowLast,
-    Search,
-    None,
-}
+use types::Mode;
 
 fn select_mode() -> Mode {
     println!("[a] add entry / [l] last entries / [s] search");
@@ -46,6 +43,8 @@ fn select_mode() -> Mode {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     ensure_config_dir_exists()?;
+    let app_conf = get_clap_app();
+    let arguments = get_arguments(app_conf.get_matches());
 
     let data_path = get_data_dir();
     let db_path = data_path.join("db");
@@ -53,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let store: pallet::Store<TimeEntry> = 
     pallet::Store::builder().with_db(db).with_index_dir(data_path).finish()?;
 
-    let mut mode : Mode = Mode::None;
+    let mut mode : Mode = arguments.mode;
     while mode == Mode::None {
         mode = select_mode();
     }
