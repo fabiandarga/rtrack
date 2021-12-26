@@ -3,12 +3,17 @@ extern crate serde;
 
 extern crate chrono;
 
+use crate::input::parse_time;
+use crate::arguments::get_clap_app;
+use crate::arguments::get_arguments;
 use chrono::prelude::*;
 
 mod ui;
 mod store;
 mod models;
 mod search;
+mod arguments;
+mod types;
 
 use crate::models::TimeEntry;
 use store::{ tracks, time_entries };
@@ -16,14 +21,7 @@ use store::path_utils::{ ensure_config_dir_exists, get_data_dir };
 use ui::prompt;
 use ui::display;
 use ui::input;
-
-#[derive(Debug, PartialEq)]
-enum Mode {
-    Add,
-    ShowLast,
-    Search,
-    None,
-}
+use types::Mode;
 
 fn select_mode() -> Mode {
     println!("[a] add entry / [l] last entries / [s] search");
@@ -46,6 +44,8 @@ fn select_mode() -> Mode {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     ensure_config_dir_exists()?;
+    let app_conf = get_clap_app();
+    let arguments = get_arguments(app_conf.get_matches());
 
     let data_path = get_data_dir();
     let db_path = data_path.join("db");
@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let store: pallet::Store<TimeEntry> = 
     pallet::Store::builder().with_db(db).with_index_dir(data_path).finish()?;
 
-    let mut mode : Mode = Mode::None;
+    let mut mode : Mode = arguments.mode;
     while mode == Mode::None {
         mode = select_mode();
     }
@@ -63,7 +63,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let track_names = tracks::get_tracks()?;
             display::print_tracks(&track_names);
 
-            let (selected_track, is_new) = input::select_track(&track_names);
+            let (selected_track, is_new) = match arguments.track {
+                Some(track) => {
+                    let is_new = !track_names.contains(&track);
+                    (track, is_new)
+                }
+                None => input::select_track(&track_names),
+            };
+
             if is_new {
                 println!("Create new Track: {}? (Y/n)", selected_track);
                 let answer = prompt(" > ");
@@ -74,13 +81,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Selected Track: {}", selected_track);
             }
         
-            let time = input::select_time();
-            let msg = input::select_message();
+            let mut time: Option<u32> = match arguments.time {
+                Some(time_str) => parse_time(&time_str),
+                None => None,
+            };
+
+            while time == None {
+                let time_str = input::select_time();
+                time = parse_time(&time_str);
+            }
+
+            let msg = match arguments.message {
+                Some(message) => message,
+                None => input::select_message(),
+            };
+
             let date : DateTime<Local> = Local::now();
-            let date_str= format!("{}-{}-{}", date.year(), date.month(), date.day());
+            let date_str = format!("{}-{}-{}", date.year(), date.month(), date.day());
         
-            let entry = TimeEntry::new(selected_track, time, msg, date_str, date.timestamp());
+            let entry = TimeEntry::new(selected_track, time.unwrap(), msg, date_str, date.timestamp());
             time_entries::add_time_entry(&store, &entry)?;
+            println!("Added: {} \"{}\" {} Minutes", entry.track, entry.message, entry.minutes);
         }
         Mode::ShowLast => {
             let limit = 3;

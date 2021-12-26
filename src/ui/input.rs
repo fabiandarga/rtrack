@@ -14,15 +14,12 @@ pub fn select_track(tracks: &Vec<String>) -> (String, bool) {
     (input, is_new)
 }
 
-pub fn select_time() -> u32 {
-    let mut time: Option<u32> = None;
+pub fn select_time() -> String {
+    let mut time: Option<String> = None;
     while time == None {
-        let input = prompt("Add minutes: ");
+        let input = prompt("Add time : ");
         if !input.is_empty() {
-            time = match input.parse::<u32>() {
-                Ok(number) => Some(number),
-                _ => None,
-            }
+            time = Some(input)
         }
     }
     time.unwrap()
@@ -51,4 +48,12 @@ pub fn choose_date() -> Result<DateQuery, String> {
             Err("Wrong Date Format".to_owned())
         }
     }
+}
+
+pub fn parse_time(time_str: &str) -> Option<u32> {
+    let time = match time_str.parse::<u32>() {
+        Ok(number) => Some(number),
+        _ => None,
+    };
+    time
 }
