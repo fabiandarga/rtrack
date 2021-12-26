@@ -3,6 +3,7 @@ extern crate serde;
 
 extern crate chrono;
 
+use crate::input::parse_time;
 use crate::arguments::get_clap_app;
 use crate::arguments::get_arguments;
 use chrono::prelude::*;
@@ -62,7 +63,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let track_names = tracks::get_tracks()?;
             display::print_tracks(&track_names);
 
-            let (selected_track, is_new) = input::select_track(&track_names);
+            let (selected_track, is_new) = match arguments.track {
+                Some(track) => {
+                    let is_new = !track_names.contains(&track);
+                    (track, is_new)
+                }
+                None => input::select_track(&track_names),
+            };
+
             if is_new {
                 println!("Create new Track: {}? (Y/n)", selected_track);
                 let answer = prompt(" > ");
@@ -73,13 +81,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Selected Track: {}", selected_track);
             }
         
-            let time = input::select_time();
-            let msg = input::select_message();
+            let mut time: Option<u32> = match arguments.time {
+                Some(time_str) => parse_time(&time_str),
+                None => None,
+            };
+
+            while time == None {
+                let time_str = input::select_time();
+                time = parse_time(&time_str);
+            }
+
+            let msg = match arguments.message {
+                Some(message) => message,
+                None => input::select_message(),
+            };
+
             let date : DateTime<Local> = Local::now();
-            let date_str= format!("{}-{}-{}", date.year(), date.month(), date.day());
+            let date_str = format!("{}-{}-{}", date.year(), date.month(), date.day());
         
-            let entry = TimeEntry::new(selected_track, time, msg, date_str, date.timestamp());
+            let entry = TimeEntry::new(selected_track, time.unwrap(), msg, date_str, date.timestamp());
             time_entries::add_time_entry(&store, &entry)?;
+            println!("Added: {} \"{}\" {} Minutes", entry.track, entry.message, entry.minutes);
         }
         Mode::ShowLast => {
             let limit = 3;
