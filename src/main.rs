@@ -3,6 +3,11 @@ extern crate serde;
 
 extern crate chrono;
 
+use crate::display::print_track_added;
+use crate::actions::get_msg_from_user;
+use crate::actions::get_track_time_from_user;
+use crate::display::print_selected_track;
+use crate::input::prompt_create_track;
 use crate::input::parse_time;
 use crate::arguments::get_clap_app;
 use crate::arguments::get_arguments;
@@ -14,6 +19,7 @@ mod models;
 mod search;
 mod arguments;
 mod types;
+mod actions;
 
 use crate::models::TimeEntry;
 use store::{ tracks, time_entries };
@@ -24,9 +30,12 @@ use ui::input;
 use types::Mode;
 
 fn select_mode() -> Mode {
-    println!("[a] add entry / [l] last entries / [s] search");
+    println!("[t] track time / [a] add entry / [l] last entries / [s] search");
     let input = prompt(" > ");
     match input.trim() {
+        "t" => {
+            Mode::Track
+        }
         "a" => {
             Mode::Add
         }
@@ -53,55 +62,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let store: pallet::Store<TimeEntry> = 
     pallet::Store::builder().with_db(db).with_index_dir(data_path).finish()?;
 
-    let mut mode : Mode = arguments.mode;
+    let mut mode : Mode = arguments.mode.clone();
     while mode == Mode::None {
         mode = select_mode();
     }
 
     match mode {
+        Mode::Track => {
+
+        }
         Mode::Add => {
             let track_names = tracks::get_tracks()?;
-            display::print_tracks(&track_names);
-
-            let (selected_track, is_new) = match arguments.track {
-                Some(track) => {
-                    let is_new = !track_names.contains(&track);
-                    (track, is_new)
-                }
-                None => input::select_track(&track_names),
-            };
+            let (selected_track, is_new) = actions::get_track_name_from_user(&track_names, &arguments);
 
             if is_new {
-                println!("Create new Track: {}? (Y/n)", selected_track);
-                let answer = prompt(" > ");
-                if answer != "n" {
+                if prompt_create_track(&selected_track, &prompt) {
                     tracks::add_track(&selected_track)?;
                 }
             } else {
-                println!("Selected Track: {}", selected_track);
+                print_selected_track(&selected_track);
             }
         
-            let mut time: Option<u32> = match arguments.time {
-                Some(time_str) => parse_time(&time_str),
-                None => None,
-            };
-
-            while time == None {
-                let time_str = input::select_time();
-                time = parse_time(&time_str);
-            }
-
-            let msg = match arguments.message {
-                Some(message) => message,
-                None => input::select_message(),
-            };
+            let time = get_track_time_from_user(&arguments);
+            let msg = get_msg_from_user(&arguments);
 
             let date : DateTime<Local> = Local::now();
             let date_str = format!("{}-{}-{}", date.year(), date.month(), date.day());
         
             let entry = TimeEntry::new(selected_track, time.unwrap(), msg, date_str, date.timestamp());
             time_entries::add_time_entry(&store, &entry)?;
-            println!("Added: {} \"{}\" {} Minutes", entry.track, entry.message, entry.minutes);
+         
+            print_track_added(&entry);
         }
         Mode::ShowLast => {
             let limit = 3;
@@ -123,7 +114,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let entries = time_entries::find_by_dates(&store, date_query)?;
             display::print_time_entry_table(&entries);
         }
-        _ => {}
+        Mode::None => {}
     }
 
    
