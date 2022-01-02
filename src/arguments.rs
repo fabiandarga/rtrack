@@ -32,6 +32,10 @@ pub fn get_arguments(matches: ArgMatches) -> Arguments {
             arguments.message = Some(m.to_owned());
         }
 
+        if matches.is_present("display") {
+            arguments.display = true;
+        }
+
         if arguments.track != None || arguments.message != None {
             arguments.mode = Mode::Track;
         }
@@ -56,6 +60,11 @@ pub fn get_clap_app() -> App<'static, 'static> {
             .long("message")
             .takes_value(true)
             .help("Add message to an entry")
+        )
+        .arg(Arg::with_name("display")
+            .short("d")
+            .long("display")
+            .help("Display the running timers")
         )
         .subcommand(SubCommand::with_name("add")
             .about("Add time entry")

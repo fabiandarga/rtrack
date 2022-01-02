@@ -3,6 +3,8 @@ extern crate serde;
 
 extern crate chrono;
 
+use std::{thread, time};
+
 use crate::store::path_utils::get_timer_data_dir;
 use crate::display::print_timer_table;
 use uuid::Uuid;
@@ -106,6 +108,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let entries = timers::get_all_timer_entries(&timer_store)?;
             print_timer_table(&entries);
+
+            if arguments.display {
+                let ten_millis = time::Duration::from_millis(100);
+                loop {
+                    thread::sleep(ten_millis);
+                    print!("{esc}c", esc = 27 as char);
+                    print_timer_table(&entries);
+                }
+            }
         }
         Mode::Add => {
             let track_name = track_select_process(&arguments)?;

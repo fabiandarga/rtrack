@@ -5,6 +5,7 @@ pub struct Arguments {
     pub track: Option<String>,
     pub message: Option<String>,
     pub time: Option<String>,
+    pub display: bool,
 }
 
 impl Arguments {
@@ -14,6 +15,7 @@ impl Arguments {
             track: None,
             message: None,
             time: None,
+            display: false,
         }
     }
 }
