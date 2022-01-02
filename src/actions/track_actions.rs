@@ -1,6 +1,8 @@
 use crate::parse_time;
 use crate::types::Arguments;
 
+use crate::store::{ tracks };
+
 use crate::ui::display;
 use crate::ui::input;
 
@@ -29,6 +31,19 @@ pub fn get_track_time_from_user(arguments: &Arguments) -> Option<u32> {
         time = parse_time(&time_str);
     }
     time
+}
+
+pub fn handle_track_input(track_name: &str, is_new: bool, prompt: &dyn Fn(&str) -> String) 
+    -> Result<(), Box<dyn std::error::Error>>
+    {
+    if is_new {
+        if input::prompt_create_track(track_name, &prompt) {
+            tracks::add_track(track_name)?;
+        }
+    } else {
+        display::print_selected_track(track_name);
+    }
+    Ok(())
 }
 
 pub fn get_msg_from_user(arguments: &Arguments) -> String {

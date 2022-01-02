@@ -850,6 +850,7 @@ dependencies = [
  "serde",
  "sled",
  "tantivy 0.16.1",
+ "uuid",
 ]
 
 [[package]]

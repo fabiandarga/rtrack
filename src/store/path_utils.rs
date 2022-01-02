@@ -22,6 +22,12 @@ pub fn get_data_dir() -> PathBuf {
     path
 }
 
+pub fn get_timer_data_dir() -> PathBuf {
+    let config_path = get_config_dir();
+    let path = config_path.join("timer_data");
+    path
+}
+
 pub fn ensure_config_dir_exists() -> std::io::Result<()> {
     let path = get_config_dir();
     fs::create_dir_all(&path)?;

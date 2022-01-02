@@ -1,3 +1,4 @@
+use crate::Timer;
 use crate::TimeEntry;
 
 pub fn print_tracks(tracks: &Vec<String>) {
@@ -16,6 +17,18 @@ pub fn print_time_entry_table(entries: &Vec<TimeEntry>) {
     println!("Track | Date   | Duration | message");
     entries.iter().for_each(|entry| { 
         print_time_entry(entry);
+    });
+}
+
+
+pub fn print_timer(entry: &Timer) {
+    println!("{} | {} | {}", entry.track, entry.message, entry.start);
+}
+
+pub fn print_timer_table(entries: &Vec<Timer>) {
+    println!("Track | message   | start");
+    entries.iter().for_each(|entry| { 
+        print_timer(entry);
     });
 }
 

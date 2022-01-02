@@ -4,7 +4,7 @@ use crate::models::TimeEntry;
 
 type TimeEntryStore = pallet::Store<TimeEntry>;
 
-pub fn add_time_entry(store: &TimeEntryStore, entry: &TimeEntry) -> Result<(), Box<dyn std::error::Error>>  {
+pub fn add_time_entry(store: &TimeEntryStore, entry: &TimeEntry) -> Result<(), Box<dyn std::error::Error>> {
     let _ = store.create(entry)?;
     Ok(())
 }
