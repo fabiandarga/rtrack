@@ -107,14 +107,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             timers::add_timer(&timer_store, &timer)?;
 
             let entries = timers::get_all_timer_entries(&timer_store)?;
-            print_timer_table(&entries);
 
             if arguments.display {
-                let ten_millis = time::Duration::from_millis(100);
+                let wait_time = time::Duration::from_millis(100);
                 loop {
-                    thread::sleep(ten_millis);
+                    let now : DateTime<Local> = Local::now();
                     print!("{esc}c", esc = 27 as char);
-                    print_timer_table(&entries);
+                    print_timer_table(&entries, now);
+                    thread::sleep(wait_time);
                 }
             }
         }
