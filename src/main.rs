@@ -37,11 +37,14 @@ use ui::input;
 use types::Mode;
 
 fn select_mode() -> Mode {
-    println!("[t] track time / [a] add entry / [l] last entries / [s] search");
+    println!("[t] track time / [d] display timers / [a] add entry / [l] last entries / [s] search");
     let input = prompt(" > ");
     match input.trim() {
         "t" => {
             Mode::Track
+        }
+        "d" => {
+            Mode::Display
         }
         "a" => {
             Mode::Add
@@ -131,6 +134,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             time_entries::add_time_entry(&store, &entry)?;
          
             print_track_added(&entry);
+        }
+        Mode::Display => {
+            let entries = timers::get_all_timer_entries(&timer_store)?;
+
+            let wait_time = time::Duration::from_millis(100);
+                loop {
+                    let now : DateTime<Local> = Local::now();
+                    print!("{esc}c", esc = 27 as char);
+                    print_timer_table(&entries, now);
+                    thread::sleep(wait_time);
+                }
         }
         Mode::ShowLast => {
             let limit = 3;

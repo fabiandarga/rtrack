@@ -4,5 +4,6 @@ pub enum Mode {
     ShowLast,
     Search,
     Track,
+    Display,
     None,
 }

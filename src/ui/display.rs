@@ -1,3 +1,4 @@
+use chrono::Duration;
 use crate::Timer;
 use crate::TimeEntry;
 use chrono::{DateTime, TimeZone, Local, Datelike, Timelike};
@@ -25,9 +26,13 @@ pub fn print_time_entry_table(entries: &Vec<TimeEntry>) {
 pub fn print_timer(entry: &Timer, time: DateTime<Local>) {
     let start = Local.timestamp_millis(entry.start);
     let start_str = format!("{y}-{m}-{d} {h}:{min}:{s}",
-    y = start.year(), m = start.month(), d = start.day(), h = start.hour(), min = start.minute(), s = start.second());
-    let duration = time - start;
-    println!("{} | {} | {} | {}", entry.track, duration.num_minutes(), start_str, entry.message);
+        y = start.year(), m = start.month(), d = start.day(),
+        h = start.hour(), min = start.minute(), s = start.second());
+    let diff = time.timestamp() - start.timestamp();
+    let duration = Duration::seconds(diff);
+    // format to display duration as "1d 3:43:05"
+    let dur_str = format!("{}", duration.num_seconds());
+    println!("{} | {} | {} | {}", entry.track, dur_str, start_str, entry.message);
 }
 
 pub fn print_timer_table(entries: &Vec<Timer>, time: DateTime<Local> ) {
