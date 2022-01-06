@@ -68,11 +68,12 @@ fn display_running_timers(timer_store: &pallet::Store<Timer>) {
 
     match entries_result {
         Ok(entries) => {
+            let timers: Vec<Timer> = entries.iter().map(|doc| doc.inner.clone()).collect();
             let wait_time = time::Duration::from_millis(100);
             loop {
                 let now : DateTime<Local> = Local::now();
                 print!("{esc}c", esc = 27 as char);
-                print_timer_table(&entries, now);
+                print_timer_table(&timers, now);
                 thread::sleep(wait_time);
             }
         },
@@ -153,29 +154,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let entries_result = timers::get_all_timer_entries(&timer_store);
             match entries_result {
                 Ok(entries) => {
+                    let timers: Vec<Timer> = entries.iter().map(|doc| doc.inner.clone()).collect();
                     let now : DateTime<Local> = Local::now();
-                    print_timer_table(&entries, now);
+                    print_timer_table(&timers, now);
 
                     let index = get_stop_index_from_user(&arguments);
 
                     if entries.len() > index {
-                        let entry = &entries[index];
-                        delete_timer(&entry.id);
-
+                        let timer_doc = &entries[index];
                         let date : DateTime<Local> = Local::now();
                         let date_str = format!("{}-{}-{}", date.year(), date.month(), date.day());
 
                         let now : DateTime<Local> = Local::now();
-                        let start = Local.timestamp_millis(entry.start);
+                        let start = Local.timestamp_millis(timer_doc.start);
                         let diff = now.timestamp() - start.timestamp();
 
                         let entry = TimeEntry::new(
-                            entry.track.to_owned(),
+                            timer_doc.track.to_owned(),
                             diff as u32,
-                            entry.message.to_owned(),
-                            date_str, date.timestamp()
+                            timer_doc.message.to_owned(),
+                            date_str,
+                            date.timestamp()
                         );
                         time_entries::add_time_entry(&store, &entry)?;
+                        print_track_added(&entry);
+
+                        delete_timer(&timer_store, timer_doc.id)?;
                     } else {
                         println!("The selected timer was not found!");
                     }
