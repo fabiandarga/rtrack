@@ -135,14 +135,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Mode::Add => {
             let track_name = track_select_process(&arguments)?;
-        
             let time = get_track_time_from_user(&arguments);
             let msg = get_msg_from_user(&arguments);
+            
+            let entry = TimeEntry::from_date(track_name, time.unwrap(), msg, Local::now());
 
-            let date : DateTime<Local> = Local::now();
-            let date_str = format!("{}-{}-{}", date.year(), date.month(), date.day());
-        
-            let entry = TimeEntry::new(track_name, time.unwrap(), msg, date_str, date.timestamp());
             time_entries::add_time_entry(&store, &entry)?;
          
             print_track_added(&entry);
@@ -162,20 +159,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     if entries.len() > index {
                         let timer_doc = &entries[index];
-                        let date : DateTime<Local> = Local::now();
-                        let date_str = format!("{}-{}-{}", date.year(), date.month(), date.day());
-
-                        let now : DateTime<Local> = Local::now();
-                        let start = Local.timestamp(timer_doc.start, 0);
-                        let diff = now.timestamp() - start.timestamp();
-
-                        let entry = TimeEntry::new(
-                            timer_doc.track.to_owned(),
-                            diff as u32,
-                            timer_doc.message.to_owned(),
-                            date_str,
-                            date.timestamp()
-                        );
+                        let entry = timer_doc.finish(Local::now());
                         time_entries::add_time_entry(&store, &entry)?;
                         print_track_added(&entry);
 
