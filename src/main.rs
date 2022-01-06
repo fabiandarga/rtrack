@@ -166,7 +166,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let date_str = format!("{}-{}-{}", date.year(), date.month(), date.day());
 
                         let now : DateTime<Local> = Local::now();
-                        let start = Local.timestamp_millis(timer_doc.start);
+                        let start = Local.timestamp(timer_doc.start, 0);
                         let diff = now.timestamp() - start.timestamp();
 
                         let entry = TimeEntry::new(

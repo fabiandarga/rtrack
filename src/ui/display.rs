@@ -24,7 +24,7 @@ pub fn print_time_entry_table(entries: &Vec<TimeEntry>) {
 
 
 pub fn print_timer(entry: &Timer, time: DateTime<Local>, index: usize) {
-    let start = Local.timestamp_millis(entry.start);
+    let start = Local.timestamp(entry.start, 0);
     let start_str = format!("{y}-{m}-{d} {h}:{min}:{s}",
         y = start.year(), m = start.month(), d = start.day(),
         h = start.hour(), min = start.minute(), s = start.second());
