@@ -1,3 +1,4 @@
+use crate::input::select_stop_index;
 use crate::parse_time;
 use crate::types::Arguments;
 
@@ -31,6 +32,13 @@ pub fn get_track_time_from_user(arguments: &Arguments) -> Option<u32> {
         time = parse_time(&time_str);
     }
     time
+}
+
+pub fn get_stop_index_from_user(arguments: &Arguments) -> usize {
+    match &arguments.index {
+        Some(index) => *index,
+        None => select_stop_index()
+    }
 }
 
 pub fn handle_track_input(track_name: &str, is_new: bool, prompt: &dyn Fn(&str) -> String) 

@@ -5,5 +5,6 @@ pub enum Mode {
     Search,
     Track,
     Display,
+    Stop,
     None,
 }

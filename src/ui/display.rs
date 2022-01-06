@@ -23,7 +23,7 @@ pub fn print_time_entry_table(entries: &Vec<TimeEntry>) {
 }
 
 
-pub fn print_timer(entry: &Timer, time: DateTime<Local>) {
+pub fn print_timer(entry: &Timer, time: DateTime<Local>, index: usize) {
     let start = Local.timestamp_millis(entry.start);
     let start_str = format!("{y}-{m}-{d} {h}:{min}:{s}",
         y = start.year(), m = start.month(), d = start.day(),
@@ -32,13 +32,13 @@ pub fn print_timer(entry: &Timer, time: DateTime<Local>) {
     let duration = Duration::seconds(diff);
     // format to display duration as "1d 3:43:05"
     let dur_str = format!("{}", duration.num_seconds());
-    println!("{} | {} | {} | {}", entry.track, dur_str, start_str, entry.message);
+    println!("# {} | {} | {} | {} | {}", index, entry.track, dur_str, start_str, entry.message);
 }
 
 pub fn print_timer_table(entries: &Vec<Timer>, time: DateTime<Local> ) {
-    println!("Track | duration | start | message");
-    entries.iter().for_each(|entry| { 
-        print_timer(entry, time);
+    println!("no. | Track | duration | start | message");
+    entries.iter().enumerate().for_each(|(index, entry)| { 
+        print_timer(entry, time, index);
     });
 }
 

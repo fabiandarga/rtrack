@@ -23,6 +23,12 @@ pub fn get_arguments(matches: ArgMatches) -> Arguments {
         if let Some(m) = matches.value_of("message") {
             arguments.message = Some(m.to_owned());
         }
+    } else if matches.is_present("stop") { 
+        arguments.mode = Mode::Stop;
+        let matches = matches.subcommand_matches("stop").unwrap();
+        if let Some(i) = matches.value_of("index") {
+            arguments.index = Some(i.parse::<usize>().unwrap());
+        };
     } else {
         if let Some(t) = matches.value_of("track") {
             arguments.track = Some(t.to_owned());
@@ -65,6 +71,15 @@ pub fn get_clap_app() -> App<'static, 'static> {
             .short("d")
             .long("display")
             .help("Display the running timers")
+        )
+        .subcommand(SubCommand::with_name("stop")
+            .about("Stop a running timer")
+            .arg(Arg::with_name("index")
+                .help("The index to be deleted")
+                .takes_value(true)
+                .short("i")
+                .long("index")
+            )
         )
         .subcommand(SubCommand::with_name("add")
             .about("Add time entry")

@@ -30,6 +30,15 @@ pub fn select_message() -> String {
     input
 }
 
+pub fn select_stop_index() -> usize {
+    let input = prompt("Choose timer to stop (defaults to first): ");
+    if !input.is_empty() {
+        input.parse::<usize>().unwrap()
+    } else {
+        0
+    }
+}
+
 pub fn choose_date() -> Result<DateQuery, String> {
     let input = prompt("Filter by date (year, month or day): ");
     let split = input.split(":");

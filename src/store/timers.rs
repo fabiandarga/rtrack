@@ -16,3 +16,7 @@ pub fn get_all_timer_entries(store: &TimerStore) -> Result<Vec<Timer>, Box<dyn s
 fn map_results_to_timer_entries(result: Results<Timer>) -> Vec<Timer> {
     result.hits.iter().map(|h| h.doc.inner.clone()).collect()
 }
+
+pub fn delete_timer(id: &str) {
+
+}

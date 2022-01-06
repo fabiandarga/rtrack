@@ -3,6 +3,8 @@ extern crate serde;
 
 extern crate chrono;
 
+use crate::timers::delete_timer;
+use crate::actions::get_stop_index_from_user;
 use std::{thread, time};
 
 use crate::store::path_utils::get_timer_data_dir;
@@ -61,6 +63,23 @@ fn select_mode() -> Mode {
     }
 }
 
+fn display_running_timers(timer_store: &pallet::Store<Timer>) {
+    let entries_result = timers::get_all_timer_entries(&timer_store);
+
+    match entries_result {
+        Ok(entries) => {
+            let wait_time = time::Duration::from_millis(100);
+            loop {
+                let now : DateTime<Local> = Local::now();
+                print!("{esc}c", esc = 27 as char);
+                print_timer_table(&entries, now);
+                thread::sleep(wait_time);
+            }
+        },
+        Err(_) => {}
+    }
+}
+
 fn track_select_process(arguments: &Arguments)-> Result<String, Box<dyn std::error::Error>> {
     let track_names = tracks::get_tracks()?;
     let (selected_track, is_new) = actions::get_track_name_from_user(&track_names, &arguments);
@@ -109,16 +128,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let timer = Timer::new(id_str, track_name, msg, date.timestamp());
             timers::add_timer(&timer_store, &timer)?;
 
-            let entries = timers::get_all_timer_entries(&timer_store)?;
-
             if arguments.display {
-                let wait_time = time::Duration::from_millis(100);
-                loop {
-                    let now : DateTime<Local> = Local::now();
-                    print!("{esc}c", esc = 27 as char);
-                    print_timer_table(&entries, now);
-                    thread::sleep(wait_time);
-                }
+                display_running_timers(&timer_store);
             }
         }
         Mode::Add => {
@@ -136,15 +147,43 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             print_track_added(&entry);
         }
         Mode::Display => {
-            let entries = timers::get_all_timer_entries(&timer_store)?;
-
-            let wait_time = time::Duration::from_millis(100);
-                loop {
+            display_running_timers(&timer_store);
+        }
+        Mode::Stop => {
+            let entries_result = timers::get_all_timer_entries(&timer_store);
+            match entries_result {
+                Ok(entries) => {
                     let now : DateTime<Local> = Local::now();
-                    print!("{esc}c", esc = 27 as char);
                     print_timer_table(&entries, now);
-                    thread::sleep(wait_time);
+
+                    let index = get_stop_index_from_user(&arguments);
+
+                    if entries.len() > index {
+                        let entry = &entries[index];
+                        delete_timer(&entry.id);
+
+                        let date : DateTime<Local> = Local::now();
+                        let date_str = format!("{}-{}-{}", date.year(), date.month(), date.day());
+
+                        let now : DateTime<Local> = Local::now();
+                        let start = Local.timestamp_millis(entry.start);
+                        let diff = now.timestamp() - start.timestamp();
+
+                        let entry = TimeEntry::new(
+                            entry.track.to_owned(),
+                            diff as u32,
+                            entry.message.to_owned(),
+                            date_str, date.timestamp()
+                        );
+                        time_entries::add_time_entry(&store, &entry)?;
+                    } else {
+                        println!("The selected timer was not found!");
+                    }
                 }
+                Err(_) => {
+                    println!("No running timers! Try 'rtrack --help' for more information.");
+                }
+            };
         }
         Mode::ShowLast => {
             let limit = 3;
