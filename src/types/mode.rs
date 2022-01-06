@@ -1,7 +1,10 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Mode {
     Add,
     ShowLast,
     Search,
+    Track,
+    Display,
+    Stop,
     None,
 }

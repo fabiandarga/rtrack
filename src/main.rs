@@ -3,6 +3,20 @@ extern crate serde;
 
 extern crate chrono;
 
+use crate::timers::delete_timer;
+use crate::actions::get_stop_index_from_user;
+use std::{thread, time};
+
+use crate::store::path_utils::get_timer_data_dir;
+use crate::display::print_timer_table;
+use uuid::Uuid;
+
+use crate::models::Timer;
+use crate::types::Arguments;
+use crate::actions::handle_track_input;
+use crate::display::print_track_added;
+use crate::actions::get_msg_from_user;
+use crate::actions::get_track_time_from_user;
 use crate::input::parse_time;
 use crate::arguments::get_clap_app;
 use crate::arguments::get_arguments;
@@ -14,9 +28,10 @@ mod models;
 mod search;
 mod arguments;
 mod types;
+mod actions;
 
 use crate::models::TimeEntry;
-use store::{ tracks, time_entries };
+use store::{ tracks, time_entries, timers };
 use store::path_utils::{ ensure_config_dir_exists, get_data_dir };
 use ui::prompt;
 use ui::display;
@@ -24,9 +39,15 @@ use ui::input;
 use types::Mode;
 
 fn select_mode() -> Mode {
-    println!("[a] add entry / [l] last entries / [s] search");
+    println!("[t] track time / [d] display timers / [a] add entry / [l] last entries / [s] search");
     let input = prompt(" > ");
     match input.trim() {
+        "t" => {
+            Mode::Track
+        }
+        "d" => {
+            Mode::Display
+        }
         "a" => {
             Mode::Add
         }
@@ -42,6 +63,31 @@ fn select_mode() -> Mode {
     }
 }
 
+fn display_running_timers(timer_store: &pallet::Store<Timer>) {
+    let entries_result = timers::get_all_timer_entries(&timer_store);
+
+    match entries_result {
+        Ok(entries) => {
+            let timers: Vec<Timer> = entries.iter().map(|doc| doc.inner.clone()).collect();
+            let wait_time = time::Duration::from_millis(100);
+            loop {
+                let now : DateTime<Local> = Local::now();
+                print!("{esc}c", esc = 27 as char);
+                print_timer_table(&timers, now);
+                thread::sleep(wait_time);
+            }
+        },
+        Err(_) => {}
+    }
+}
+
+fn track_select_process(arguments: &Arguments)-> Result<String, Box<dyn std::error::Error>> {
+    let track_names = tracks::get_tracks()?;
+    let (selected_track, is_new) = actions::get_track_name_from_user(&track_names, &arguments);
+    handle_track_input(&selected_track, is_new, &prompt)?;
+    Ok(selected_track)
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     ensure_config_dir_exists()?;
     let app_conf = get_clap_app();
@@ -50,58 +96,82 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let data_path = get_data_dir();
     let db_path = data_path.join("db");
     let db = sled::open(db_path)?;
-    let store: pallet::Store<TimeEntry> = 
-    pallet::Store::builder().with_db(db).with_index_dir(data_path).finish()?;
+    let store: pallet::Store<TimeEntry> = pallet::Store::builder()
+        .with_db(db)
+        .with_index_dir(&data_path)
+        .finish()?;
 
-    let mut mode : Mode = arguments.mode;
+    let timer_data_path = get_timer_data_dir();
+    let timer_db_path = timer_data_path.join("db");
+    let timer_db = sled::open(timer_db_path)?;
+    let timer_store: pallet::Store<Timer> = pallet::Store::builder()
+        .with_db(timer_db)
+        .with_index_dir(timer_data_path)
+        .finish()?;
+
+    let mut mode : Mode = arguments.mode.clone();
     while mode == Mode::None {
         mode = select_mode();
     }
 
     match mode {
-        Mode::Add => {
-            let track_names = tracks::get_tracks()?;
-            display::print_tracks(&track_names);
+        Mode::Track => {
+            let track_name = track_select_process(&arguments)?;
+            let id_str = Uuid::new_v4()
+                .to_simple()
+                .encode_lower(&mut Uuid::encode_buffer())
+                .to_owned();
 
-            let (selected_track, is_new) = match arguments.track {
-                Some(track) => {
-                    let is_new = !track_names.contains(&track);
-                    (track, is_new)
-                }
-                None => input::select_track(&track_names),
-            };
-
-            if is_new {
-                println!("Create new Track: {}? (Y/n)", selected_track);
-                let answer = prompt(" > ");
-                if answer != "n" {
-                    tracks::add_track(&selected_track)?;
-                }
-            } else {
-                println!("Selected Track: {}", selected_track);
-            }
-        
-            let mut time: Option<u32> = match arguments.time {
-                Some(time_str) => parse_time(&time_str),
-                None => None,
-            };
-
-            while time == None {
-                let time_str = input::select_time();
-                time = parse_time(&time_str);
-            }
-
-            let msg = match arguments.message {
-                Some(message) => message,
-                None => input::select_message(),
-            };
-
+            println!("{}", id_str);
+            let msg = get_msg_from_user(&arguments);
             let date : DateTime<Local> = Local::now();
-            let date_str = format!("{}-{}-{}", date.year(), date.month(), date.day());
-        
-            let entry = TimeEntry::new(selected_track, time.unwrap(), msg, date_str, date.timestamp());
+
+            let timer = Timer::new(id_str, track_name, msg, date.timestamp());
+            timers::add_timer(&timer_store, &timer)?;
+
+            if arguments.display {
+                display_running_timers(&timer_store);
+            }
+        }
+        Mode::Add => {
+            let track_name = track_select_process(&arguments)?;
+            let time = get_track_time_from_user(&arguments);
+            let msg = get_msg_from_user(&arguments);
+            
+            let entry = TimeEntry::from_date(track_name, time.unwrap(), msg, Local::now());
+
             time_entries::add_time_entry(&store, &entry)?;
-            println!("Added: {} \"{}\" {} Minutes", entry.track, entry.message, entry.minutes);
+         
+            print_track_added(&entry);
+        }
+        Mode::Display => {
+            display_running_timers(&timer_store);
+        }
+        Mode::Stop => {
+            let entries_result = timers::get_all_timer_entries(&timer_store);
+            match entries_result {
+                Ok(entries) => {
+                    let timers: Vec<Timer> = entries.iter().map(|doc| doc.inner.clone()).collect();
+                    let now : DateTime<Local> = Local::now();
+                    print_timer_table(&timers, now);
+
+                    let index = get_stop_index_from_user(&arguments);
+
+                    if entries.len() > index {
+                        let timer_doc = &entries[index];
+                        let entry = timer_doc.finish(Local::now());
+                        time_entries::add_time_entry(&store, &entry)?;
+                        print_track_added(&entry);
+
+                        delete_timer(&timer_store, timer_doc.id)?;
+                    } else {
+                        println!("The selected timer was not found!");
+                    }
+                }
+                Err(_) => {
+                    println!("No running timers! Try 'rtrack --help' for more information.");
+                }
+            };
         }
         Mode::ShowLast => {
             let limit = 3;
@@ -123,7 +193,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let entries = time_entries::find_by_dates(&store, date_query)?;
             display::print_time_entry_table(&entries);
         }
-        _ => {}
+        Mode::None => {}
     }
 
    

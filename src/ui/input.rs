@@ -30,6 +30,15 @@ pub fn select_message() -> String {
     input
 }
 
+pub fn select_stop_index() -> usize {
+    let input = prompt("Choose timer to stop (defaults to first): ");
+    if !input.is_empty() {
+        input.parse::<usize>().unwrap()
+    } else {
+        0
+    }
+}
+
 pub fn choose_date() -> Result<DateQuery, String> {
     let input = prompt("Filter by date (year, month or day): ");
     let split = input.split(":");
@@ -56,4 +65,27 @@ pub fn parse_time(time_str: &str) -> Option<u32> {
         _ => None,
     };
     time
+}
+
+pub fn prompt_create_track(track_name: &str, prompt_fn: &dyn Fn(&str) -> String) -> bool {
+    println!("Create new Track: {}? (Y/n)", track_name);
+    let answer = prompt_fn(" > ");
+    answer != "n"
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_prompt_create_track_ok() {
+        fn prompt_fn (_s: &str) -> String { "y".to_string() }
+        let answer = prompt_create_track("test", &prompt_fn);
+        assert!(answer);
+    }
+    #[test]
+    fn test_prompt_create_track_no() {
+        fn prompt_fn (_s: &str) -> String { "n".to_string() }
+        let answer = prompt_create_track("test", &prompt_fn);
+        assert!(answer != true);
+    }
 }
