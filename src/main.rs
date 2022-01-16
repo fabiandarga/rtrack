@@ -22,6 +22,7 @@ use crate::arguments::get_clap_app;
 use crate::arguments::get_arguments;
 use chrono::prelude::*;
 
+mod data;
 mod ui;
 mod store;
 mod models;

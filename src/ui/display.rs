@@ -1,4 +1,5 @@
-use chrono::Duration;
+use crate::data::Seconds;
+use crate::ui::format::seconds_to_hr_short;
 use crate::Timer;
 use crate::TimeEntry;
 use chrono::{DateTime, TimeZone, Local, Datelike, Timelike};
@@ -12,11 +13,12 @@ pub fn print_tracks(tracks: &Vec<String>) {
 }
 
 pub fn print_time_entry(entry: &TimeEntry) {
-    println!("{} | {} | {} | {}", entry.track, entry.date ,entry.minutes, entry.message);
+    let dur_str = seconds_to_hr_short(Seconds::new(entry.minutes as i64));
+    println!("{:<10} | {} | {:<11} | {}", entry.track, entry.date , dur_str, entry.message);
 }
 
 pub fn print_time_entry_table(entries: &Vec<TimeEntry>) {
-    println!("Track | Date   | Duration | message");
+    println!("{:<10} | {:<10} | {:<11} | Message", "Track", "Date", "Duration");
     entries.iter().for_each(|entry| { 
         print_time_entry(entry);
     });
@@ -29,14 +31,12 @@ pub fn print_timer(entry: &Timer, time: DateTime<Local>, index: usize) {
         y = start.year(), m = start.month(), d = start.day(),
         h = start.hour(), min = start.minute(), s = start.second());
     let diff = time.timestamp() - start.timestamp();
-    let duration = Duration::seconds(diff);
-    // format to display duration as "1d 3:43:05"
-    let dur_str = format!("{}", duration.num_seconds());
-    println!("# {} | {} | {} | {} | {}", index, entry.track, dur_str, start_str, entry.message);
+    let dur_str = seconds_to_hr_short(Seconds::new(diff));
+    println!("# {} | {:<10} | {:<11} | {} | {}", index, entry.track, dur_str, start_str, entry.message);
 }
 
 pub fn print_timer_table(entries: &Vec<Timer>, time: DateTime<Local> ) {
-    println!("no. | Track | duration | start | message");
+    println!("No. | {:<10} | {:<11} | {:<18} | Message", "Track", "Duration", "Start");
     entries.iter().enumerate().for_each(|(index, entry)| { 
         print_timer(entry, time, index);
     });
