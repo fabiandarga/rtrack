@@ -1,26 +1,9 @@
 #[macro_use]
 extern crate serde;
 extern crate chrono;
-use crate::input::select_mode;
-
-use crate::timers::delete_timer;
-use crate::actions::get_stop_index_from_user;
-use std::{thread, time};
-
-use crate::store::path_utils::get_timer_data_dir;
-use crate::display::print_timer_table;
-use uuid::Uuid;
-
-use crate::models::Timer;
-use crate::types::Arguments;
-use crate::actions::handle_track_input;
-use crate::display::print_track_added;
-use crate::actions::get_msg_from_user;
-use crate::actions::get_track_time_from_user;
-use crate::input::parse_time;
-use crate::arguments::get_clap_app;
-use crate::arguments::get_arguments;
 use chrono::prelude::*;
+use std::{thread, time};
+use uuid::Uuid;
 
 mod data;
 mod ui;
@@ -31,13 +14,25 @@ mod arguments;
 mod types;
 mod actions;
 
-use crate::models::TimeEntry;
-use store::{ tracks, time_entries, timers };
-use store::path_utils::{ ensure_config_dir_exists, get_data_dir };
-use ui::prompt;
-use ui::display;
-use ui::input;
-use types::Mode;
+use crate::timers::delete_timer;
+use crate::display::{ print_timer_table, print_track_added };
+use crate::types::{ Arguments, Mode };
+use crate::actions::{ 
+    handle_track_input,
+    get_msg_from_user,
+    get_track_time_from_user,
+    get_stop_index_from_user
+};
+use crate::input::{ parse_time, select_mode };
+use crate::arguments::{ get_clap_app, get_arguments };
+use crate::models::{ TimeEntry, Timer };
+use store::{ 
+    tracks,
+    time_entries,
+    timers, 
+    path_utils::{ ensure_config_dir_exists, get_data_dir, get_timer_data_dir }
+};
+use ui::{ prompt, display, input};
 
 fn display_running_timers(timer_store: &pallet::Store<Timer>) {
     let entries_result = timers::get_all_timer_entries(&timer_store);
