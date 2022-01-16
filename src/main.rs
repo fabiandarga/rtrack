@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate serde;
-
 extern crate chrono;
+use crate::input::select_mode;
 
 use crate::timers::delete_timer;
 use crate::actions::get_stop_index_from_user;
@@ -38,31 +38,6 @@ use ui::prompt;
 use ui::display;
 use ui::input;
 use types::Mode;
-
-fn select_mode() -> Mode {
-    println!("[t] track time / [d] display timers / [a] add entry / [l] last entries / [s] search");
-    let input = prompt(" > ");
-    match input.trim() {
-        "t" => {
-            Mode::Track
-        }
-        "d" => {
-            Mode::Display
-        }
-        "a" => {
-            Mode::Add
-        }
-        "l" => {
-            Mode::ShowLast
-        }
-        "s" => {
-            Mode::Search
-        }
-        _ => {
-            Mode::None
-        }
-    }
-}
 
 fn display_running_timers(timer_store: &pallet::Store<Timer>) {
     let entries_result = timers::get_all_timer_entries(&timer_store);
@@ -111,7 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .finish()?;
 
     let mut mode : Mode = arguments.mode.clone();
-    while mode == Mode::None {
+    if mode == Mode::None {
         mode = select_mode();
     }
 
