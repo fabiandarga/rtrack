@@ -1,8 +1,8 @@
 #[macro_use]
 extern crate serde;
 extern crate chrono;
+use crate::actions::run_display_mode;
 use chrono::prelude::*;
-use std::{thread, time};
 use uuid::Uuid;
 
 mod data;
@@ -34,21 +34,16 @@ use store::{
 };
 use ui::{ prompt, display, input};
 
-fn display_running_timers(timer_store: &pallet::Store<Timer>) {
-    let entries_result = timers::get_all_timer_entries(&timer_store);
-
-    match entries_result {
+fn display_running_timers(timer_store: &pallet::Store<Timer>)
+    -> Result<(), Box<dyn std::error::Error>>
+{
+    match timers::get_all_timer_entries(&timer_store) {
         Ok(entries) => {
             let timers: Vec<Timer> = entries.iter().map(|doc| doc.inner.clone()).collect();
-            let wait_time = time::Duration::from_millis(100);
-            loop {
-                let now : DateTime<Local> = Local::now();
-                print!("{esc}c", esc = 27 as char);
-                print_timer_table(&timers, now);
-                thread::sleep(wait_time);
-            }
+            run_display_mode(timers)?;
+            Ok(())
         },
-        Err(_) => {}
+        Err(_) => Ok(())
     }
 }
 
@@ -101,7 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             timers::add_timer(&timer_store, &timer)?;
 
             if arguments.display {
-                display_running_timers(&timer_store);
+                display_running_timers(&timer_store)?;
             }
         }
         Mode::Add => {
@@ -116,7 +111,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             print_track_added(&entry);
         }
         Mode::Display => {
-            display_running_timers(&timer_store);
+            display_running_timers(&timer_store)?;
         }
         Mode::Stop => {
             let entries_result = timers::get_all_timer_entries(&timer_store);
