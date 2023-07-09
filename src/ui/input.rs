@@ -1,5 +1,29 @@
-use crate::ui::prompt;
+use crate::Mode;
 use crate::search::DateQuery;
+use super::{ read_key_input, prompt};
+use crossterm::event::KeyCode;
+
+pub fn select_mode() -> Mode {
+    println!("[t] track time / [d] display timers / [a] add entry / [l] last entries / [s] search");
+    let mut mode = Mode::None;
+    while mode == Mode::None {
+        let res = read_key_input();
+        mode = match res {
+            Ok(key_event) => {
+                match key_event.code {
+                    KeyCode::Char('t') => Mode::Track,
+                    KeyCode::Char('d') => Mode::Display,
+                    KeyCode::Char('a') => Mode::Add,
+                    KeyCode::Char('l') => Mode::ShowLast,
+                    KeyCode::Char('s') => Mode::Search,
+                    _ => Mode::None,
+                }
+            },
+            Err(_err) => Mode::None
+        }
+    }
+    mode
+}
 
 pub fn select_track(tracks: &Vec<String>) -> (String, bool) {
     let mut input: String = "".to_owned();

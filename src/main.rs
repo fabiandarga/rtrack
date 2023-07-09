@@ -1,26 +1,9 @@
 #[macro_use]
 extern crate serde;
-
 extern crate chrono;
-
-use crate::timers::delete_timer;
-use crate::actions::get_stop_index_from_user;
-use std::{thread, time};
-
-use crate::store::path_utils::get_timer_data_dir;
-use crate::display::print_timer_table;
-use uuid::Uuid;
-
-use crate::models::Timer;
-use crate::types::Arguments;
-use crate::actions::handle_track_input;
-use crate::display::print_track_added;
-use crate::actions::get_msg_from_user;
-use crate::actions::get_track_time_from_user;
-use crate::input::parse_time;
-use crate::arguments::get_clap_app;
-use crate::arguments::get_arguments;
+use crate::actions::run_display_mode;
 use chrono::prelude::*;
+use uuid::Uuid;
 
 mod data;
 mod ui;
@@ -31,54 +14,36 @@ mod arguments;
 mod types;
 mod actions;
 
-use crate::models::TimeEntry;
-use store::{ tracks, time_entries, timers };
-use store::path_utils::{ ensure_config_dir_exists, get_data_dir };
-use ui::prompt;
-use ui::display;
-use ui::input;
-use types::Mode;
+use crate::timers::delete_timer;
+use crate::display::{ print_timer_table, print_track_added };
+use crate::types::{ Arguments, Mode };
+use crate::actions::{ 
+    handle_track_input,
+    get_msg_from_user,
+    get_track_time_from_user,
+    get_stop_index_from_user
+};
+use crate::input::{ parse_time, select_mode };
+use crate::arguments::{ get_clap_app, get_arguments };
+use crate::models::{ TimeEntry, Timer };
+use store::{ 
+    tracks,
+    time_entries,
+    timers, 
+    path_utils::{ ensure_config_dir_exists, get_data_dir, get_timer_data_dir }
+};
+use ui::{ prompt, display, input};
 
-fn select_mode() -> Mode {
-    println!("[t] track time / [d] display timers / [a] add entry / [l] last entries / [s] search");
-    let input = prompt(" > ");
-    match input.trim() {
-        "t" => {
-            Mode::Track
-        }
-        "d" => {
-            Mode::Display
-        }
-        "a" => {
-            Mode::Add
-        }
-        "l" => {
-            Mode::ShowLast
-        }
-        "s" => {
-            Mode::Search
-        }
-        _ => {
-            Mode::None
-        }
-    }
-}
-
-fn display_running_timers(timer_store: &pallet::Store<Timer>) {
-    let entries_result = timers::get_all_timer_entries(&timer_store);
-
-    match entries_result {
+fn display_running_timers(timer_store: &pallet::Store<Timer>)
+    -> Result<(), Box<dyn std::error::Error>>
+{
+    match timers::get_all_timer_entries(&timer_store) {
         Ok(entries) => {
             let timers: Vec<Timer> = entries.iter().map(|doc| doc.inner.clone()).collect();
-            let wait_time = time::Duration::from_millis(100);
-            loop {
-                let now : DateTime<Local> = Local::now();
-                print!("{esc}c", esc = 27 as char);
-                print_timer_table(&timers, now);
-                thread::sleep(wait_time);
-            }
+            run_display_mode(timers)?;
+            Ok(())
         },
-        Err(_) => {}
+        Err(_) => Ok(())
     }
 }
 
@@ -111,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .finish()?;
 
     let mut mode : Mode = arguments.mode.clone();
-    while mode == Mode::None {
+    if mode == Mode::None {
         mode = select_mode();
     }
 
@@ -131,7 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             timers::add_timer(&timer_store, &timer)?;
 
             if arguments.display {
-                display_running_timers(&timer_store);
+                display_running_timers(&timer_store)?;
             }
         }
         Mode::Add => {
@@ -146,7 +111,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             print_track_added(&entry);
         }
         Mode::Display => {
-            display_running_timers(&timer_store);
+            display_running_timers(&timer_store)?;
         }
         Mode::Stop => {
             let entries_result = timers::get_all_timer_entries(&timer_store);
