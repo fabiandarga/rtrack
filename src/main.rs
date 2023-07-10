@@ -11,9 +11,11 @@ mod store;
 mod models;
 mod search;
 mod arguments;
+mod main_loop;
 mod types;
 mod actions;
 
+use crate::main_loop::{ start_loop };
 use crate::timers::delete_timer;
 use crate::display::{ print_timer_table, print_track_added };
 use crate::types::{ Arguments, Mode };
@@ -76,92 +78,94 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .finish()?;
 
     let mut mode : Mode = arguments.mode.clone();
-    if mode == Mode::None {
-        mode = select_mode();
-    }
+    // if mode == Mode::None {
+    //     mode = select_mode();
+    // }
 
-    match mode {
-        Mode::Track => {
-            let track_name = track_select_process(&arguments)?;
-            let id_str = Uuid::new_v4()
-                .to_simple()
-                .encode_lower(&mut Uuid::encode_buffer())
-                .to_owned();
+    start_loop()?;
 
-            println!("{}", id_str);
-            let msg = get_msg_from_user(&arguments);
-            let date : DateTime<Local> = Local::now();
+    // match mode {
+    //     Mode::Track => {
+    //         let track_name = track_select_process(&arguments)?;
+    //         let id_str = Uuid::new_v4()
+    //             .to_simple()
+    //             .encode_lower(&mut Uuid::encode_buffer())
+    //             .to_owned();
 
-            let timer = Timer::new(id_str, track_name, msg, date.timestamp());
-            timers::add_timer(&timer_store, &timer)?;
+    //         println!("{}", id_str);
+    //         let msg = get_msg_from_user(&arguments);
+    //         let date : DateTime<Local> = Local::now();
 
-            if arguments.display {
-                display_running_timers(&timer_store)?;
-            }
-        }
-        Mode::Add => {
-            let track_name = track_select_process(&arguments)?;
-            let time = get_track_time_from_user(&arguments);
-            let msg = get_msg_from_user(&arguments);
-            
-            let entry = TimeEntry::from_date(track_name, time.unwrap(), msg, Local::now());
+    //         let timer = Timer::new(id_str, track_name, msg, date.timestamp());
+    //         timers::add_timer(&timer_store, &timer)?;
 
-            time_entries::add_time_entry(&store, &entry)?;
-         
-            print_track_added(&entry);
-        }
-        Mode::Display => {
-            display_running_timers(&timer_store)?;
-        }
-        Mode::Stop => {
-            let entries_result = timers::get_all_timer_entries(&timer_store);
-            match entries_result {
-                Ok(entries) => {
-                    let timers: Vec<Timer> = entries.iter().map(|doc| doc.inner.clone()).collect();
-                    let now : DateTime<Local> = Local::now();
-                    print_timer_table(&timers, now);
+    //         if arguments.display {
+    //             display_running_timers(&timer_store)?;
+    //         }
+    //     }
+    //     Mode::Add => {
+    //         let track_name = track_select_process(&arguments)?;
+    //         let time = get_track_time_from_user(&arguments);
+    //         let msg = get_msg_from_user(&arguments);
+    //         
+    //         let entry = TimeEntry::from_date(track_name, time.unwrap(), msg, Local::now());
 
-                    let index = get_stop_index_from_user(&arguments);
+    //         time_entries::add_time_entry(&store, &entry)?;
+    //      
+    //         print_track_added(&entry);
+    //     }
+    //     Mode::Display => {
+    //         display_running_timers(&timer_store)?;
+    //     }
+    //     Mode::Stop => {
+    //         let entries_result = timers::get_all_timer_entries(&timer_store);
+    //         match entries_result {
+    //             Ok(entries) => {
+    //                 let timers: Vec<Timer> = entries.iter().map(|doc| doc.inner.clone()).collect();
+    //                 let now : DateTime<Local> = Local::now();
+    //                 print_timer_table(&timers, now);
 
-                    if entries.len() > index {
-                        let timer_doc = &entries[index];
-                        let entry = timer_doc.finish(Local::now());
-                        time_entries::add_time_entry(&store, &entry)?;
-                        print_track_added(&entry);
+    //                 let index = get_stop_index_from_user(&arguments);
 
-                        delete_timer(&timer_store, timer_doc.id)?;
-                    } else {
-                        println!("The selected timer was not found!");
-                    }
-                }
-                Err(_) => {
-                    println!("No running timers! Try 'rtrack --help' for more information.");
-                }
-            };
-        }
-        Mode::ShowLast => {
-            let limit = 3;
-            let entries = time_entries::get_all_time_entries(&store)?;
-            let last_n : Vec<TimeEntry> = entries.iter().take(limit).map(|e| { e.clone() }).collect();
+    //                 if entries.len() > index {
+    //                     let timer_doc = &entries[index];
+    //                     let entry = timer_doc.finish(Local::now());
+    //                     time_entries::add_time_entry(&store, &entry)?;
+    //                     print_track_added(&entry);
 
-            println!("---");
-            println!("Last {} entries", limit);
-            println!("---");
+    //                     delete_timer(&timer_store, timer_doc.id)?;
+    //                 } else {
+    //                     println!("The selected timer was not found!");
+    //                 }
+    //             }
+    //             Err(_) => {
+    //                 println!("No running timers! Try 'rtrack --help' for more information.");
+    //             }
+    //         };
+    //     }
+    //     Mode::ShowLast => {
+    //         let limit = 3;
+    //         let entries = time_entries::get_all_time_entries(&store)?;
+    //         let last_n : Vec<TimeEntry> = entries.iter().take(limit).map(|e| { e.clone() }).collect();
 
-            display::print_time_entry_table(&last_n);
-        }
-        Mode::Search => {
-            println!("---");
-            println!("Search by date\n");
-            println!("Enter year, year-month or year-month-day for exact matches.");
-            println!("Or enter a range. e.g. \"2020-04:2021-04\".\n");
-            let date_query = input::choose_date()?;
-            let entries = time_entries::find_by_dates(&store, date_query)?;
-            display::print_time_entry_table(&entries);
-        }
-        Mode::None => {}
-    }
+    //         println!("---");
+    //         println!("Last {} entries", limit);
+    //         println!("---");
 
+    //         display::print_time_entry_table(&last_n);
+    //     }
+    //     Mode::Search => {
+    //         println!("---");
+    //         println!("Search by date\n");
+    //         println!("Enter year, year-month or year-month-day for exact matches.");
+    //         println!("Or enter a range. e.g. \"2020-04:2021-04\".\n");
+    //         let date_query = input::choose_date()?;
+    //         let entries = time_entries::find_by_dates(&store, date_query)?;
+    //         display::print_time_entry_table(&entries);
+    //     }
+    //     Mode::None => {},
+    //     Mode::Quit => {},
+    // }
    
     Ok(())
 }

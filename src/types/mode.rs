@@ -6,5 +6,6 @@ pub enum Mode {
     Track,
     Display,
     Stop,
+    Quit,
     None,
 }
