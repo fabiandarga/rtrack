@@ -1,7 +1,13 @@
-use std::{sync::{mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread::{self, Thread, JoinHandle}, time::{Instant, Duration}, io::stdout};
+use std::{sync::{mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread::{self, Thread, JoinHandle}, time::{Instant, Duration}, io::{stdout, Write}};
 
 use chrono::{DateTime, Local };
-use crossterm::{terminal::{ enable_raw_mode, disable_raw_mode, ClearType, Clear }, event::{KeyEvent, KeyCode, Event, self}, execute, cursor::MoveTo};
+use crossterm::{
+    terminal::{ enable_raw_mode, disable_raw_mode, ClearType, Clear },
+    event::{KeyEvent, KeyCode, Event, self},
+    queue,
+    cursor::{MoveTo, Hide, MoveToNextLine},
+    style::Print
+};
 
 use crate::types::Mode;
 
@@ -73,20 +79,25 @@ fn action_loop(rx: Receiver<LoopEvent<KeyEvent>>, mode: Arc<Mutex<Mode>>)
 pub fn render_loop(mode: Arc<Mutex<Mode>>) -> JoinHandle<()> {
     thread::spawn(move || {
         while *mode.lock().unwrap() != Mode::Quit {
-            execute!(
-                stdout(),
+            let mut out = stdout();
+            queue!(
+                out,
+                Hide,
                 Clear(ClearType::All),
                 MoveTo(0, 0),
             ).unwrap();
             match *mode.lock().unwrap() {
                 Mode::Quit => {
-                   println!("QUIT");
+                   queue!(out, Print("QUIT")).unwrap();
                 } 
                _ => {
-                   println!("OTHER");
+                   queue!(out, Print("OTHER")).unwrap();
                } 
             }
-            println!("test :) ");
+            
+            queue!(out, MoveToNextLine(1), Print("test :)")).unwrap();
+            out.flush().unwrap();
+
             thread::sleep(Duration::from_millis(200));
         }
     })
