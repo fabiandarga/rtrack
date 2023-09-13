@@ -4,22 +4,23 @@ use chrono::{DateTime, Local };
 use crossterm::{
     terminal::{ enable_raw_mode, disable_raw_mode, ClearType, Clear },
     event::{KeyEvent, KeyCode, Event, self},
-    queue,
-    cursor::{MoveTo, Hide, MoveToNextLine},
+    queue, execute,
+    cursor::{MoveTo, Hide, MoveToNextLine, Show},
     style::Print
 };
 
-use crate::types::Mode;
-
+use crate::{types::Mode, modes::display_mode::UserCommand};
+use crate::modes::display_mode;
 pub fn start_loop() -> Result<(), Box<dyn std::error::Error>> {
   enable_raw_mode()?;
   let (tx, rx) = mpsc::channel();
   let mode = Arc::new(Mutex::new(Mode::Display));
   let input_handle = input_loop(tx, Arc::clone(&mode));
-  let action_hanlde = action_loop(rx, Arc::clone(&mode));
-  let render_handle = render_loop(Arc::clone(&mode));
-  //disable_raw_mode()?;
+  
+  action_loop(rx, Arc::clone(&mode));
+  render_loop(Arc::clone(&mode));
   input_handle.join().unwrap();
+  disable_raw_mode()?;
   Ok(())
 }
 
@@ -61,13 +62,33 @@ fn action_loop(rx: Receiver<LoopEvent<KeyEvent>>, mode: Arc<Mutex<Mode>>)
             match rx.recv().unwrap() {
                 LoopEvent::Input(event) => {
                     match event.code {
-                        KeyCode::Char('s') => { print!("S"); },
-                        KeyCode::Char('q') => { *mode.lock().unwrap() = Mode::Quit; }
-                        KeyCode::Char(char) => {
-                            println!("key: {}", char);
+                        KeyCode::Esc | KeyCode::Char('q') => {
+                            let mut out = stdout();
+                            execute!(
+                                out,
+                                Show,
+                                Clear(ClearType::All),
+                                MoveTo(0, 0)
+                            ).unwrap();
+                            *mode.lock().unwrap() = Mode::Quit;
                         }
                         _ => {}
-                    };
+                    }
+                    let mut res: Option<UserCommand> = None;
+                    match *mode.lock().unwrap() {
+                        Mode::Display => {
+                            res = display_mode::handle_input(event);
+                        }
+                        _ => {}
+                    }
+
+                    if let Some(cmd) = res {
+                        match cmd {
+                            UserCommand::ChangeMode(new_mode) => {
+                                *mode.lock().unwrap() = new_mode;
+                            }
+                        }
+                    }
                 }
                 LoopEvent::Tick => {}
             };
@@ -87,9 +108,12 @@ pub fn render_loop(mode: Arc<Mutex<Mode>>) -> JoinHandle<()> {
                 MoveTo(0, 0),
             ).unwrap();
             match *mode.lock().unwrap() {
-                Mode::Quit => {
-                   queue!(out, Print("QUIT")).unwrap();
-                } 
+                Mode::Display => {
+                    display_mode::render(&out);
+                }
+                Mode::Track => {
+                   queue!(out, Print("TRACK")).unwrap();
+                }
                _ => {
                    queue!(out, Print("OTHER")).unwrap();
                } 

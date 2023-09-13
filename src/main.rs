@@ -14,9 +14,9 @@ mod arguments;
 mod main_loop;
 mod types;
 mod actions;
+mod modes;
 
-use crate::main_loop::{ start_loop };
-use crate::timers::delete_timer;
+use crate::main_loop::start_loop;
 use crate::display::{ print_timer_table, print_track_added };
 use crate::types::{ Arguments, Mode };
 use crate::actions::{ 
