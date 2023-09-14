@@ -1,9 +1,15 @@
 #[macro_use]
 extern crate serde;
 extern crate chrono;
-use crate::actions::run_display_mode;
-use chrono::prelude::*;
-use uuid::Uuid;
+use std::error::Error;
+use std::fmt::{Display, Formatter, self};
+
+use store::time_entries::build_time_entry_store;
+use store::timers::build_timer_store;
+use crate::main_loop::start_loop;
+use crate::arguments::{ get_clap_app, get_arguments };
+use crate::models::{ TimeEntry, Timer };
+use store::path_utils::{ ensure_config_dir_exists, get_data_dir, get_timer_data_dir };
 
 mod data;
 mod ui;
@@ -16,26 +22,7 @@ mod types;
 mod actions;
 mod modes;
 
-use crate::main_loop::start_loop;
-use crate::display::{ print_timer_table, print_track_added };
-use crate::types::{ Arguments, Mode };
-use crate::actions::{ 
-    handle_track_input,
-    get_msg_from_user,
-    get_track_time_from_user,
-    get_stop_index_from_user
-};
-use crate::input::{ parse_time, select_mode };
-use crate::arguments::{ get_clap_app, get_arguments };
-use crate::models::{ TimeEntry, Timer };
-use store::{ 
-    tracks,
-    time_entries,
-    timers, 
-    path_utils::{ ensure_config_dir_exists, get_data_dir, get_timer_data_dir }
-};
-use ui::{ prompt, display, input};
-
+/**
 fn display_running_timers(timer_store: &pallet::Store<Timer>)
     -> Result<(), Box<dyn std::error::Error>>
 {
@@ -48,41 +35,48 @@ fn display_running_timers(timer_store: &pallet::Store<Timer>)
         Err(_) => Ok(())
     }
 }
+*/
 
+/**
 fn track_select_process(arguments: &Arguments)-> Result<String, Box<dyn std::error::Error>> {
     let track_names = tracks::get_tracks()?;
     let (selected_track, is_new) = actions::get_track_name_from_user(&track_names, &arguments);
     handle_track_input(&selected_track, is_new, &prompt)?;
     Ok(selected_track)
 }
+*/
+#[derive(Debug)]
+struct LoadError;
+
+impl Display for LoadError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "Could not load program data")
+    }
+}
+
+impl Error for LoadError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        // You can return the underlying cause of the error here if applicable
+        // For now, we return None.
+        None
+    }
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     ensure_config_dir_exists()?;
-    let app_conf = get_clap_app();
-    let arguments = get_arguments(app_conf.get_matches());
+    // let app_conf = get_clap_app();
+    // let arguments = get_arguments(app_conf.get_matches());
 
     let data_path = get_data_dir();
-    let db_path = data_path.join("db");
-    let db = sled::open(db_path)?;
-    let store: pallet::Store<TimeEntry> = pallet::Store::builder()
-        .with_db(db)
-        .with_index_dir(&data_path)
-        .finish()?;
+    let time_entries = build_time_entry_store(data_path);
 
     let timer_data_path = get_timer_data_dir();
-    let timer_db_path = timer_data_path.join("db");
-    let timer_db = sled::open(timer_db_path)?;
-    let timer_store: pallet::Store<Timer> = pallet::Store::builder()
-        .with_db(timer_db)
-        .with_index_dir(timer_data_path)
-        .finish()?;
-
-    let mut mode : Mode = arguments.mode.clone();
-    // if mode == Mode::None {
-    //     mode = select_mode();
-    // }
-
-    start_loop()?;
+    let timers = build_timer_store(timer_data_path);
+    
+    match (timers, time_entries) {
+        (Ok(t), Ok(te)) => start_loop(t, te)?,
+        _ => { return Err(Box::new(LoadError)) },
+    }
 
     // match mode {
     //     Mode::Track => {

@@ -1,6 +1,4 @@
-use std::{sync::{mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread::{self, Thread, JoinHandle}, time::{Instant, Duration}, io::{stdout, Write}};
-
-use chrono::{DateTime, Local };
+use std::{sync::{mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread::{self, JoinHandle}, time::{Instant, Duration}, io::{stdout, Write}};
 use crossterm::{
     terminal::{ enable_raw_mode, disable_raw_mode, ClearType, Clear },
     event::{KeyEvent, KeyCode, Event, self},
@@ -9,9 +7,10 @@ use crossterm::{
     style::Print
 };
 
-use crate::{types::Mode, modes::display_mode::UserCommand};
+use crate::{types::Mode, modes::display_mode::UserCommand, store::{timers::TimerStore, time_entries::TimeEntryStore}};
 use crate::modes::display_mode;
-pub fn start_loop() -> Result<(), Box<dyn std::error::Error>> {
+pub fn start_loop(timer_store: TimerStore, time_entry_store: TimeEntryStore)
+    -> Result<(), Box<dyn std::error::Error>> {
   enable_raw_mode()?;
   let (tx, rx) = mpsc::channel();
   let mode = Arc::new(Mutex::new(Mode::Display));

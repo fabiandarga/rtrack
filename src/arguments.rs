@@ -1,6 +1,6 @@
 extern crate clap;
 use crate::types::Arguments;
-use crate::Mode;
+use crate::types::Mode;
 use clap::{Arg, App, SubCommand, ArgMatches};
 
 pub fn get_arguments(matches: ArgMatches) -> Arguments {

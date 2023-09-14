@@ -1,11 +1,12 @@
-use crate::input::select_stop_index;
-use crate::parse_time;
 use crate::types::Arguments;
-
-use crate::store::{ tracks };
-
+use crate::store::tracks;
 use crate::ui::display;
-use crate::ui::input;
+use crate::ui::{
+    input,
+    input::{
+        parse_time, select_stop_index
+    }
+};
 
 pub fn get_track_name_from_user(track_names: &Vec<String>, arguments: &Arguments) -> (String, bool)  {
     match &arguments.track {

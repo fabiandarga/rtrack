@@ -4,7 +4,7 @@ use std::io::stdout;
 use chrono::Local;
 use chrono::DateTime;
 use crate::Timer;
-use crate::print_timer_table;
+use crate::ui::display::print_timer_table;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::time::Duration;

@@ -18,9 +18,11 @@ pub fn handle_input(event: KeyEvent) -> Option<UserCommand> {
         _ => {}
     }
     None 
+
 }
 
 pub fn render(mut out: &Stdout) {
+    // get entries info
     queue!(
         out,
         Print("=== RTrack ==="),
