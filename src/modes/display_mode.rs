@@ -1,10 +1,20 @@
 use std::io::Stdout;
+use chrono::{Local, DateTime};
 use crossterm::{
     queue,
     style::Print, cursor::MoveToNextLine, event::{ KeyEvent, KeyCode }
 };
 
-use crate::{types::Mode, store::{timers::TimerStore, time_entries::{TimeEntryStore, get_last_n_time_entries}}, ui::display::print_time_entry_table};
+use crate::{
+    types::Mode,
+    store::{
+        timers::{TimerStore, get_all_timer_entries},
+        time_entries::{
+            TimeEntryStore, get_last_n_time_entries
+        }
+    },
+    ui::display::{print_time_entry_table, print_timer_table}, models::Timer
+};
 
 pub enum UserCommand {
     ChangeMode(Mode)
@@ -33,7 +43,19 @@ pub fn render(mut out: &Stdout, timers: &TimerStore, time_entries: &TimeEntrySto
         MoveToNextLine(2),
         Print("Timers"),
         MoveToNextLine(1),
-        Print("----------"),
+        Print("----------")
+    ).expect("could not render Display Head");
+    
+    let timers_result = get_all_timer_entries(&timers).unwrap();
+    let current_timers: Vec<Timer> = timers_result.iter().map(|doc| doc.inner.clone()).collect();
+    let now : DateTime<Local> = Local::now();
+    let timer_lines = print_timer_table(&current_timers, now);
+    timer_lines.iter().for_each(|line| {
+        queue!(out, MoveToNextLine(1), Print(line)).unwrap();
+    });
+    
+    queue!(
+        out,
         MoveToNextLine(1),
         MoveToNextLine(1),
         Print("[t] start new timer | [s] stop a timer | [p] pause a timer"),

@@ -25,21 +25,23 @@ pub fn print_time_entry_table(entries: &Vec<TimeEntry>) -> Vec<String> {
 }
 
 
-pub fn print_timer(entry: &Timer, time: DateTime<Local>, index: usize) {
+pub fn print_timer(entry: &Timer, time: DateTime<Local>, index: usize) -> String {
     let start = Local.timestamp(entry.start, 0);
     let start_str = format!("{y}-{m}-{d} {h}:{min}:{s}",
         y = start.year(), m = start.month(), d = start.day(),
         h = start.hour(), min = start.minute(), s = start.second());
     let diff = time.timestamp() - start.timestamp();
     let dur_str = seconds_to_hr_short(Seconds::new(diff));
-    println!("# {} | {:<10} | {:<11} | {} | {}", index, entry.track, dur_str, start_str, entry.message);
+    format!("# {} | {:<10} | {:<11} | {} | {}", index, entry.track, dur_str, start_str, entry.message)
 }
 
-pub fn print_timer_table(entries: &Vec<Timer>, time: DateTime<Local> ) {
-    println!("No. | {:<10} | {:<11} | {:<18} | Message", "Track", "Duration", "Start");
-    entries.iter().enumerate().for_each(|(index, entry)| { 
-        print_timer(entry, time, index);
-    });
+pub fn print_timer_table(entries: &Vec<Timer>, time: DateTime<Local> ) -> Vec<String> {
+    let mut lines: Vec<String> = vec![];
+    lines.push(format!("No. | {:<10} | {:<11} | {:<18} | Message", "Track", "Duration", "Start"));
+    lines.extend(
+        entries.iter().enumerate().map(|(index, entry)| print_timer(entry, time, index))
+    );
+    lines
 }
 
 pub fn print_selected_track(track_name: &str) {
