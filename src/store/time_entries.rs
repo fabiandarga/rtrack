@@ -1,8 +1,21 @@
+use std::path::PathBuf;
+
 use crate::search::DateQuery;
 use pallet::search::Results;
 use crate::models::TimeEntry;
 
-type TimeEntryStore = pallet::Store<TimeEntry>;
+pub type TimeEntryStore = pallet::Store<TimeEntry>;
+pub type TimeEntriesResult = Result<Vec<TimeEntry>, Box<dyn std::error::Error>>;
+
+pub fn build_time_entry_store(data_path: PathBuf) -> Result<TimeEntryStore, Box<dyn std::error::Error>> {
+    let db_path = data_path.join("db");
+    let db = sled::open(db_path)?;
+    let store: pallet::Store<TimeEntry> = pallet::Store::builder()
+        .with_db(db)
+        .with_index_dir(&data_path)
+        .finish()?;
+    Ok(store)
+}
 
 pub fn add_time_entry(store: &TimeEntryStore, entry: &TimeEntry) -> Result<(), Box<dyn std::error::Error>> {
     let _ = store.create(entry)?;
@@ -13,6 +26,12 @@ pub fn get_all_time_entries(store: &TimeEntryStore) -> Result<Vec<TimeEntry>, Bo
     let result = store.search("*")?;
     let time_entries = map_results_to_time_entries(result);
     Ok(sort_by_timestamp_desc(time_entries))
+}
+
+pub fn get_last_n_time_entries(store: &TimeEntryStore, limit: usize) -> TimeEntriesResult {
+   let entries = get_all_time_entries(store)?; 
+   let last_n = entries.iter().take(limit).map(|e| { e.clone() }).collect();
+   Ok(last_n)
 }
 
 pub fn find_by_dates(store: &TimeEntryStore, dates: DateQuery) -> Result<Vec<TimeEntry>, Box<dyn std::error::Error>> {

@@ -1,6 +1,4 @@
-use std::{sync::{mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread::{self, Thread, JoinHandle}, time::{Instant, Duration}, io::{stdout, Write}};
-
-use chrono::{DateTime, Local };
+use std::{sync::{mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread::{self, JoinHandle}, time::{Instant, Duration}, io::{stdout, Write}};
 use crossterm::{
     terminal::{ enable_raw_mode, disable_raw_mode, ClearType, Clear },
     event::{KeyEvent, KeyCode, Event, self},
@@ -9,16 +7,19 @@ use crossterm::{
     style::Print
 };
 
-use crate::{types::Mode, modes::display_mode::UserCommand};
+use crate::{types::Mode, modes::display_mode::UserCommand, store::{timers::TimerStore, time_entries::{TimeEntryStore, self}}};
 use crate::modes::display_mode;
-pub fn start_loop() -> Result<(), Box<dyn std::error::Error>> {
+pub fn start_loop(timer_store: TimerStore, time_entry_store: TimeEntryStore)
+    -> Result<(), Box<dyn std::error::Error>> {
   enable_raw_mode()?;
   let (tx, rx) = mpsc::channel();
   let mode = Arc::new(Mutex::new(Mode::Display));
+  let timers = Arc::new(Mutex::new(timer_store));
+  let time_entries = Arc::new(Mutex::new(time_entry_store));
   let input_handle = input_loop(tx, Arc::clone(&mode));
   
   action_loop(rx, Arc::clone(&mode));
-  render_loop(Arc::clone(&mode));
+  render_loop(Arc::clone(&mode), Arc::clone(&timers), Arc::clone(&time_entries));
   input_handle.join().unwrap();
   disable_raw_mode()?;
   Ok(())
@@ -97,7 +98,11 @@ fn action_loop(rx: Receiver<LoopEvent<KeyEvent>>, mode: Arc<Mutex<Mode>>)
     })
 }
 
-pub fn render_loop(mode: Arc<Mutex<Mode>>) -> JoinHandle<()> {
+pub fn render_loop(
+    mode: Arc<Mutex<Mode>>,
+    timers: Arc<Mutex<TimerStore>>,
+    time_entries: Arc<Mutex<TimeEntryStore>>) -> JoinHandle<()> {
+    
     thread::spawn(move || {
         while *mode.lock().unwrap() != Mode::Quit {
             let mut out = stdout();
@@ -109,7 +114,10 @@ pub fn render_loop(mode: Arc<Mutex<Mode>>) -> JoinHandle<()> {
             ).unwrap();
             match *mode.lock().unwrap() {
                 Mode::Display => {
-                    display_mode::render(&out);
+                    display_mode::render(
+                        &out,
+                        &timers.lock().unwrap(),
+                        &time_entries.lock().unwrap());
                 }
                 Mode::Track => {
                    queue!(out, Print("TRACK")).unwrap();
@@ -119,7 +127,6 @@ pub fn render_loop(mode: Arc<Mutex<Mode>>) -> JoinHandle<()> {
                } 
             }
             
-            queue!(out, MoveToNextLine(1), Print("test :)")).unwrap();
             out.flush().unwrap();
 
             thread::sleep(Duration::from_millis(200));

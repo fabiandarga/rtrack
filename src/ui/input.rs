@@ -1,4 +1,4 @@
-use crate::Mode;
+use crate::types::Mode;
 use crate::search::DateQuery;
 use super::{ read_key_input, prompt};
 use crossterm::event::KeyCode;
