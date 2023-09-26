@@ -12,16 +12,16 @@ pub fn print_tracks(tracks: &Vec<String>) {
     }
 }
 
-pub fn print_time_entry(entry: &TimeEntry) {
+pub fn print_time_entry(entry: &TimeEntry) -> String {
     let dur_str = seconds_to_hr_short(Seconds::new(entry.minutes as i64));
-    println!("{:<10} | {} | {:<11} | {}", entry.track, entry.date , dur_str, entry.message);
+    format!("{:<15} | {} | {:<11} | {}", entry.track, entry.date , dur_str, entry.message)
 }
 
-pub fn print_time_entry_table(entries: &Vec<TimeEntry>) {
-    println!("{:<10} | {:<10} | {:<11} | Message", "Track", "Date", "Duration");
-    entries.iter().for_each(|entry| { 
-        print_time_entry(entry);
-    });
+pub fn print_time_entry_table(entries: &Vec<TimeEntry>) -> Vec<String> {
+    let mut lines: Vec<String> = vec![];
+    lines.push(format!("{:<15} | {:<10} | {:<11} | Message", "Track", "Date", "Duration"));
+    lines.extend(entries.iter().map(|entry| print_time_entry(entry)));
+    lines
 }
 
 
